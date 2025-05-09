@@ -6,6 +6,7 @@ import org.springframework.web.bind.annotation.RestController
 import org.bson.types.ObjectId
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import java.time.Clock
@@ -35,7 +36,7 @@ class NoteController(
     )
 
     @PostMapping
-    fun save( body: NoteRequest): NoteResponse {
+    fun save( @RequestBody body: NoteRequest): NoteResponse {
         val note: Note = noteRepository.save(
             Note(
                 title = body.title,
@@ -54,8 +55,14 @@ class NoteController(
     fun findByOwnerId(
         @RequestParam(required = true) ownerId: String
     ): List<NoteResponse> {
-        return noteRepository.findByOwner(ObjectId(ownerId)).map {
-            it.toNoteResponse()
+        // hex string is 24 characters
+        return if(ownerId.isNotEmpty() && ownerId.length == 24) {
+            noteRepository.findByOwner(ObjectId(ownerId)).map {
+                it.toNoteResponse()
+            }
+        }
+        else {
+            emptyList()
         }
     }
 
