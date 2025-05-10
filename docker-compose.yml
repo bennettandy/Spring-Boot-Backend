@@ -20,6 +20,7 @@ services:
       - SPRING_DATA_MONGODB_HOST=mongodb
       - SPRING_DATA_MONGODB_PORT=27017
       - SPRING_DATA_MONGODB_DATABASE=mydb
+      - JWT_SECRET_BASE64="YmFzc2V0aG91bmRzMzI0MzIxNDM"
     depends_on:
       - mongodb
     networks:
