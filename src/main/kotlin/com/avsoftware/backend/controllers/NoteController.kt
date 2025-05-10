@@ -5,6 +5,8 @@ import com.avsoftware.backend.db.repository.NoteRepository
 import org.springframework.web.bind.annotation.RestController
 import org.bson.types.ObjectId
 import org.slf4j.LoggerFactory
+import org.springframework.security.core.context.SecurityContext
+import org.springframework.security.core.context.SecurityContextHolder
 import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
@@ -45,14 +47,15 @@ class NoteController(
     )
 
     @PostMapping
-    fun save( @RequestBody body: NoteRequest): NoteResponse {
+    fun save(@RequestBody body: NoteRequest): NoteResponse {
+        val ownerId = SecurityContextHolder.getContext().authentication.principal as String
         val note: Note = noteRepository.save(
             Note(
                 title = body.title,
                 content = body.content,
                 color = body.color,
                 createdAt = Instant.now(clock),
-                owner =  ObjectId.get(), // ObjectId(body.ownerId),
+                owner = ObjectId(ownerId),
                 id = body.id?.let { ObjectId(body.id) } ?: ObjectId.get()
             )
         )
@@ -61,25 +64,28 @@ class NoteController(
     }
 
     @GetMapping
-    fun findByOwnerId(
-        @RequestParam(required = true) ownerId: String
-    ): List<NoteResponse> {
+    fun findByOwnerId(): List<NoteResponse> {
+        val ownerId = SecurityContextHolder.getContext().authentication.principal as String
         // hex string is 24 characters
-        return if(ownerId.isNotEmpty() && ownerId.length == 24) {
-            noteRepository.findByOwner(ObjectId(ownerId)).map {
-                it.toNoteResponse()
-            }
-        }
-        else {
-            emptyList()
+        return noteRepository.findByOwner(ObjectId(ownerId)).map {
+            it.toNoteResponse()
         }
     }
 
     @DeleteMapping(path = ["/{id}"])
-    fun deleteById(@PathVariable id: String){
+    fun deleteById(@PathVariable id: String) {
         logger.debug("DELETE id: $id")
-        noteRepository.deleteById(ObjectId(id))
-        logger.debug("DELETED")
+
+        // make sure we are the owner of this note
+        val note = noteRepository.findById(ObjectId(id)).orElseThrow {
+            IllegalArgumentException("Note not found")
+        }
+
+        val ownerId = SecurityContextHolder.getContext().authentication.principal as String
+        if (note.id.toHexString() == ownerId){
+            noteRepository.deleteById(ObjectId(id))
+            logger.debug("DELETED")
+        }
     }
 
     private fun Note.toNoteResponse() = NoteResponse(

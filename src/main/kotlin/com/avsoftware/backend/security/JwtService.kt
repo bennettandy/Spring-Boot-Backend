@@ -1,7 +1,6 @@
 package com.avsoftware.backend.security
 
 import io.jsonwebtoken.Claims
-import io.jsonwebtoken.JwtBuilder
 import io.jsonwebtoken.Jwts
 import io.jsonwebtoken.security.Keys
 import org.slf4j.LoggerFactory
@@ -11,12 +10,11 @@ import java.util.Base64
 import java.util.Date
 
 @Service
-class JwtService {
+class JwtService(
+    @Value("\${jwt.secret}")  val jwtSecret: String
+) {
 
     private val logger = LoggerFactory.getLogger(this::class.java)
-
-
-    @Value("JWT_SECRET_BASE64") private lateinit var jwtSecret: String
 
     private val secretKey = Keys.hmacShaKeyFor(Base64.getDecoder().decode(jwtSecret))
 
@@ -30,12 +28,12 @@ class JwtService {
         expiry: Long
     ): String {
         val now = Date()
-        val expiry = Date( now.time + expiry)
+        val expiryDate = Date( now.time + expiry)
         return Jwts.builder()
             .subject(userId)
             .claim("type", type)
             .issuedAt(now)
-            .expiration(expiry)
+            .expiration(expiryDate)
             .signWith(secretKey, Jwts.SIG.HS256)
             .compact()
     }
