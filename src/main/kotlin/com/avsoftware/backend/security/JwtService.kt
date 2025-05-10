@@ -69,20 +69,21 @@ class JwtService {
     // Authorization: Bearer <token>
     fun getUserIdFromToken(token: String): String {
 
-        val rawToken = if (token.startsWith("Bearer ")){
-            token.removePrefix("Bearer ")
-        } else token
-
-        val claims = parseAllClaims(rawToken) ?: throw IllegalArgumentException("Invalid Token")
+        val claims = parseAllClaims(token) ?: throw IllegalArgumentException("Invalid Token")
 
         return claims.subject // subject is the userId
     }
 
     private fun parseAllClaims( token: String): Claims? {
+
+        val rawToken = if (token.startsWith("Bearer ")){
+            token.removePrefix("Bearer ")
+        } else token
+
         return try {
             Jwts.parser()
                 .verifyWith(secretKey)
-                .build().parseSignedClaims(token)
+                .build().parseSignedClaims(rawToken)
                 .payload
         } catch (e: Exception){
             logger.debug("Failed to parse JWT", e)
